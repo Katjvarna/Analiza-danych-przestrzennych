@@ -1,4 +1,4 @@
-# Wskaźnik NDVI w QGIS
+# Program Copernicus - obliczanie NDVI
 
 **Autor:** Gracjan Krzympiec / s102376
 
