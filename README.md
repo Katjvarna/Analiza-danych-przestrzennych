@@ -72,3 +72,62 @@ Zakres wartości na obliczonej warstwie: od **-0,92** do **0,45**.
 ├── ndvi_mapa.png
 └── kalkulator.png
 ```
+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+# Analiza wysokorozdzielczych danych CIR oraz obliczenie wskaźnika NDVI w programie QGIS
+
+## 1. Cel zadania
+Celem zadania było pobranie wysokorozdzielczej ortofotomapy w barwach umownych z wykorzystaniem bliskiej podczerwieni (**CIR – Color Infrared**) dla wybranego obszaru (Opole – okolice Ratusza), wyznaczenie znormalizowanego różnicowego wskaźnika wegetacji (**NDVI**), a następnie przeprowadzenie analizy statystycznej (statystyki strefowej) dla wybranych poligonów testowych reprezentujących różne formy pokrycia terenu.
+
+---
+
+## 2. Wykorzystane dane i narzędzia
+* **Oprogramowanie:** QGIS
+* **Źródło danych:** Krajowy Geoportal ([geoportal.gov.pl](https://www.geoportal.gov.pl/))
+* **Wykorzystany arkusz ortofotomapy:** `M-33-48-D-d-3-4` (aktualność: 13.06.2025 r., kompozycja barwna: CIR)
+* **Układ współrzędnych:** `EPSG:2180` (ETRF2000-PL / CS92)
+
+### Charakterystyka kompozycji CIR
+W wykorzystanej ortofotomapie CIR kanały spektralne przypisane są w następujący sposób:
+* **Kanał 1:** Bliska podczerwień ($NIR$)
+* **Kanał 2:** Pasmo czerwone ($Red$)
+* **Kanał 3:** Pasmo zielone ($Green$)
+
+Zdrowa roślinność charakteryzuje się silnym odbiciem promieniowania w zakresie bliskiej podczerwieni ($NIR$) oraz silną absorpcją w paśmie czerwonym ($Red$), dzięki czemu na kompozycji CIR odwzorowuje się w intensywnych odcieniach czerwieni.
+
+---
+
+## 3. Przebieg wykonania zadania (Krok po kroku)
+
+### Krok 1: Pozyskanie danych z Geoportalu
+1. W serwisie `mapy.geoportal.gov.pl` uruchomiono sekcję **Dane do pobrania** $\rightarrow$ **Ortofotomapa** $\rightarrow$ **Ortofotomapa wg rozdzielczości**.
+2. Zlokalizowano obszar centrum Opola (Ratusz) i pobrano arkusz `M-33-48-D-d-3-4` z 2025 roku w kompozycji **CIR** (format GeoTIFF).
+3. Pobrany raster wczytano do programu QGIS pod nazwą roboczą `NDVI_HIGH_RES`.
+
+### Krok 2: Obliczenie wskaźnika NDVI
+Wskaźnik wegetacji NDVI obliczono zgodnie ze wzorem:
+
+$$NDVI = \frac{NIR - R}{NIR + R}$$
+
+1. Uruchomiono narzędzie **Raster** $\rightarrow$ **Kalkulator rastrów...** (Raster Calculator).
+2. Aby uniknąć utraty jakości (przeskalowania wyniku do rozdzielczości warstw satelitarnych Sentinel-2 obecnych w projekcie), zaznaczono na liście pasmo `NDVI_HIGH_RES@1` i użyto opcji **Zasięg z bieżącej warstwy** (Current layer extent), zachowując oryginalną, wysoką rozdzielczość przestrzenną ortofotomapy oraz układ `EPSG:2180`.
+3. Wprowadzono formułę obliczeniową uwzględniającą kolejność kanałów w obrazie CIR:
+   ```text
+   ( "NDVI_HIGH_RES@1" - "NDVI_HIGH_RES@2" ) / ( "NDVI_HIGH_RES@1" + "NDVI_HIGH_RES@2" )
+   ```
+4. Wygenerowano jednokanałowy raster wynikowy o wartościach mieszczących się w przedziale od $-1$ do $1$.
+
+### Krok 3: Utworzenie warstwy wektorowej (poligonów testowych)
+1. Wybrano opcję **Warstwa** $\rightarrow$ **Twórz warstwę** $\rightarrow$ **Nowa warstwa tymczasowa...**
+2. Utworzono warstwę poligonową w układzie `EPSG:2180`.
+3. Za pomocą narzędzia **Dodaj poligon** zwektoryzowano kilka reprezentatywnych obszarów testowych o różnym pokryciu terenu (np. korony drzew / zieleń miejska, dachy budynków / nawierzchnia rynku, woda).
+
+Poniższy zrzut ekranu przedstawia obliczony wskaźnik `NDVI_HIGH_RES` (w palecie barw od czerwonego do zielonego, zakres wartości od -0,93 do 0,84) nałożony na podkład OpenStreetMap (układ EPSG:2180) wraz z utworzoną warstwą wektorową `Dzialka` reprezentującą badany obszar:
+
+![Wynik analizy NDVI oraz warstwa wektorowa Dzialka w QGIS](NDVI_HD.jpg)
+
+### Krok 4: Obliczenie statystyk strefowych (Zonal Statistics)
+1. W panelu **Algorytmy** (Processing Toolbox) uruchomiono narzędzie **Statystyki strefowe** (Zonal Statistics).
+2. Jako warstwę wektorową wskazano utworzone poligony testowe, natomiast jako warstwę rastrową – wyliczony wcześniej wysokorozdzielczy wskaźnik NDVI.
+3. Wybrano do obliczenia podstawowe miary statystyczne: **średnia** (`mean`), **mediana** (`median`), **minimum** (`min`) oraz **maksimum** (`max`).
+4. Wyniki odczytano w tabeli atrybutów nowo powstałej warstwy wektorowej.
