@@ -124,7 +124,7 @@ $$NDVI = \frac{NIR - R}{NIR + R}$$
 
 Poniższy zrzut ekranu przedstawia obliczony wskaźnik `NDVI_HIGH_RES` (w palecie barw od czerwonego do zielonego, zakres wartości od -0,93 do 0,84) nałożony na podkład OpenStreetMap (układ EPSG:2180) wraz z utworzoną warstwą wektorową `Dzialka` reprezentującą badany obszar:
 
-![Mapa NDVI W HD Z DZIAŁKAMI](NDVI_HD.png)
+![Mapa NDVI W HD Z DZIAŁKAMI](NDVI_HD1.png)
 
 ### Krok 4: Obliczenie statystyk strefowych (Zonal Statistics)
 1. W panelu **Algorytmy** (Processing Toolbox) uruchomiono narzędzie **Statystyki strefowe** (Zonal Statistics).
