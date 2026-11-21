@@ -133,9 +133,7 @@ Poniższy zrzut ekranu przedstawia obliczony wskaźnik `NDVI_HIGH_RES` (w paleci
 4. Wyniki odczytano w tabeli atrybutów nowo powstałej warstwy wektorowej.
 
 ---
-# Analiza danych przestrzennych w Pythonie – GeoPandas i Rasterio
 
-%%writefile README.md
 # Analiza danych przestrzennych w Pythonie – GeoPandas (Część A)
 
 Repozytorium zawiera realizację Części A laboratorium z analizy danych przestrzennych dla miasta Opola przy użyciu bibliotek `geopandas`, `shapely`, `pandas`, `pyproj` oraz `matplotlib`.
