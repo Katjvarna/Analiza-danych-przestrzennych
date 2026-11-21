@@ -159,9 +159,7 @@ Repozytorium zawiera realizację Części A laboratorium z analizy danych przest
     ├── dane/
     │   ├── pm25_sensors.csv            # Odczyty PM2.5 z czujników w Opolu (dane surowe)
     │   ├── opole_districts.geojson     # Granice 29 dzielnic Opola (OpenStreetMap)
-    │   ├── opole_schools.geojson       # Szkoły podstawowe w Opolu (OpenStreetMap)
-    │   ├── S2_L2A_2026-10-06_B04.tiff  # Sentinel-2, pasmo B04 - czerwone (Red)
-    │   └── S2_L2A_2026-10-06_B08.tiff  # Sentinel-2, pasmo B08 - bliska podczerwień (NIR)
+    │   └── opole_schools.geojson       # Szkoły podstawowe w Opolu (OpenStreetMap)
     │
     ├── wyniki/
     │   ├── pm25.gpkg                   # Wynikowy GeoPackage (warstwy: districts, sensors)
