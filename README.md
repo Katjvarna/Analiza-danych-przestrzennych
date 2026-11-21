@@ -253,7 +253,7 @@ Za pomocą `gpd.sjoin(..., predicate="within")` przypisano wszystkie 130 czujnik
 | **Śródmieście** | **26.8** | 7 |
 | **Zaodrze** | **22.5** | 6 |
 
-![Kartogram średniego stężenia PM2.5 w dzielnicach Opola](img/mapa_pm25_dzielnice.jpg)
+![Kartogram średniego stężenia PM2.5 w dzielnicach Opola](img/mapa_pm25_dzielnice.jfif)
 
 > **Wnioski (Pytanie kontrolne A7):**
 > Zamiana `predicate="within"` na `predicate="intersects"` nie zmienia wyników dla punktów leżących wewnątrz poligonów. Różnica pojawiłaby się w przypadku czujnika leżącego dokładnie na granicy dzielnic (`within` odrzuciłoby punkt, a `intersects` przypisałoby go do obu sąsiednich dzielnic) lub przy łączeniu geometrii liniowych/poligonowych przecinających granice.
@@ -272,7 +272,7 @@ Wczytano warstwę 19 szkół podstawowych (`opole_schools.geojson`, konwersja do
 | Pokrycie powierzchni miasta buforami 500 m | **9.5 %** |
 | Szkoły z czujnikiem w promieniu **1500 m** | **19** (100%) |
 
-![Mapa buforów 500 m wokół szkół podstawowych i czujników PM2.5](img/mapa_bufory_szkoly.jpg)
+![Mapa buforów 500 m wokół szkół podstawowych i czujników PM2.5](img/mapa_bufory_szkoly.jfif)
 
 > **Wnioski (Pytanie kontrolne A8):**
 > Zwiększenie promienia bufora do 1500 m obejmuje czujnikami wszystkie **19 szkół**. Wywołanie `buffer(1500)` bezpośrednio na danych w układzie `EPSG:4326` byłoby błędem krytycznym – jednostką w tym układzie są stopnie, więc powstałyby okręgi o promieniu **1500 stopni** (wielokrotnie przekraczające wymiary całej kuli ziemskiej).
