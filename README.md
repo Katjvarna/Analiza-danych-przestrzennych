@@ -179,10 +179,70 @@ Repozytorium zawiera realizację Części A laboratorium z analizy danych przest
 ## 2. A1–A4. Przygotowanie, czyszczenie i wizualizacja danych z czujników
 
 ### A1. Geometria i GeoDataFrame od zera
-Utworzono podstawowe obiekty `Point` (Rynek w Opolu) i `Polygon` za pomocą `shapely`, zachowując konwencję GIS `(x, y) = (longitude, latitude)`, a następnie zbudowano tabelę `GeoDataFrame` w układzie `EPSG:4326`.
+Utworzono podstawowe obiekty geometryczne (`Point`, `Polygon`) z biblioteki `shapely` oraz zbudowano tabelę przestrzenną `GeoDataFrame` w geograficznym układzie współrzędnych **EPSG:4326 (WGS 84)**. Zgodnie z konwencją GIS współrzędne przekazywane są w kolejności `(x, y) = (longitude, latitude)`:
 
-### A2–A3. Inspekcja i czyszczenie pliku `pm25_sensors.csv`
-Surowy zbiór danych (145 wierszy, 5 kolumn) poddano czteroetapowemu czyszczeniu:
+    from shapely.geometry import Point, Polygon
+    import geopandas as gpd
+
+    rynek = Point(17.9226, 50.6681)
+    square = Polygon([(17.92, 50.66), (17.93, 50.66), (17.93, 50.67), (17.92, 50.67)])
+
+    places = gpd.GeoDataFrame(
+        {"name": ["Rynek", "Square"]},
+        geometry=[rynek, square],
+        crs="EPSG:4326",
+    )
+
+- **Weryfikacja punktu kontrolnego:** Obiekt `places` posiada układ `EPSG:4326` oraz geometrie typu `Point` i `Polygon`.
+
+---
+
+### A2. Wczytanie i wstępna inspekcja surowych danych
+Surowe dane z pliku `dane/pm25_sensors.csv` wczytano jako standardową tabelę `pandas.DataFrame` i poddano analizie jakościowej:
+
+    import pandas as pd
+
+    raw = pd.read_csv("dane/pm25_sensors.csv", parse_dates=["measured_at"])
+    raw[["lat", "lon", "pm25"]].describe()
+    raw.isna().sum()
+    raw.duplicated().sum()
+
+**Wyniki inspekcji zbioru wejściowego (145 wierszy, 5 kolumn):**
+- **Duplikaty:** 5 zduplikowanych wierszy.
+- **Braki danych (`NaN`):** 3 braki w kolumnie `lat` oraz 4 braki w kolumnie `lon` (w tym 1 w wierszu zduplikowanym).
+- **Błędne wartości pomiarowe:** Minimalna wartość `pm25` wynosi `-999` (kod błędu czujnika).
+- **Anomalie współrzędnych:** Minimalna wartość `lat` wynosi ok. `17.87`.
+
+> **Wnioski (Pytanie kontrolne A2):**
+> *Skąd wzięła się wartość minimalna `lat` ≈ 17,9, skoro Opole leży na szerokości geograficznej ok. 50,7°?*
+> Wartość `17.9°` odpowiada długości geograficznej (`lon`) Opola. W części rekordów nastąpiło omyłkowe zamienienie miejscami wartości w kolumnach szerokości (`lat`) i długości geograficznej (`lon`).
+
+---
+
+### A3. Czyszczenie danych pomiarowych
+Przeprowadzono czteroetapowy proces czyszczenia danych wraz z raportowaniem liczby rekordów po każdym kroku:
+
+    df = raw.copy()
+    report = {"input rows": len(df)}
+
+    # 1. Usunięcie duplikatów
+    df = df.drop_duplicates()
+    report["after drop_duplicates"] = len(df)
+
+    # 2. Usunięcie wierszy bez współrzędnych geograficznych
+    df = df.dropna(subset=["lat", "lon"])
+    report["after dropna"] = len(df)
+
+    # 3. Korekta zamienionych współrzędnych (dla Polski: lat 49-55, lon 14-24.5)
+    swapped = df["lat"].between(14, 24.5) & df["lon"].between(49, 55)
+    df.loc[swapped, ["lat", "lon"]] = df.loc[swapped, ["lon", "lat"]].to_numpy()
+    report["swapped rows fixed"] = int(swapped.sum())
+
+    # 4. Odfiltrowanie kodów błędu sensora (-999)
+    df = df[df["pm25"] >= 0].reset_index(drop=True)
+    report["clean rows"] = len(df)
+
+**Podsumowanie procesu czyszczenia danych:**
 
 | Etap przetwarzania | Liczba wierszy / operacji |
 | :--- | :---: |
@@ -192,12 +252,35 @@ Surowy zbiór danych (145 wierszy, 5 kolumn) poddano czteroetapowemu czyszczeniu
 | Naprawione rekordy z zamienionymi osiami `lat`/`lon` (`swapped rows fixed`) | **3** |
 | Ostateczna liczba czystych wierszy po odfiltrowaniu błędów `-999` (`clean rows`) | **130** |
 
-> **Wnioski z pytań kontrolnych (A2–A4):**
-> * **Anomalia `lat ≈ 17,9`:** Wartość ta odpowiada długości geograficznej (`lon`) Opola – w 3 rekordach kolumny `lat` i `lon` zostały zamienione miejscami.
-> * **Naprawa vs usunięcie:** Zamienione współrzędne zawierały pełną informację o lokalizacji (możliwa bezstratna korekta), natomiast `-999` to kod błędu czujnika oznaczający brak rzeczywistego odczytu – rekordy te należało odrzucić.
-> * **Konwersja do `GeoDataFrame` (A4):** Po oczyszczeniu wszystkie 130 punktów mieści się w granicach Opola (`total_bounds`: `[17.79, 50.62, 18.02, 50.77]`, `EPSG:4326`). Odwrócenie kolejności argumentów w `points_from_xy(lat, lon)` przeniosłoby wszystkie czujniki w okolice `17.9°N, 50.7°E` (pustynia na Półwyspie Arabskim – wschodni Jemen).
+Po czyszczeniu współrzędne `lat` mieszczą się w prawidłowym zakresie `50.62 – 50.77`, a pomiary `pm25` w przedziale `9.0 – 35.0`.
+
+> **Wnioski (Pytanie kontrolne A3):**
+> *Dlaczego wiersze z zamienionymi współrzędnymi naprawiono, a wiersze z wartością `-999` usunięto?*
+> Wiersze z zamienionymi współrzędnymi zawierały pełną i prawdziwą informację o lokalizacji punktu, zapisaną jedynie w niewłaściwej kolejności kolumn – możliwa była ich bezstratna korekta. Z kolei wartość `-999` oznacza brak odczytu (błąd sprzętowy czujnika), a rzeczywiste stężenie PM2.5 w tym punkcie pozostaje nieznane, dlatego rekordy te należało odfiltrować, aby nie zaniżały wyników analizy.
+
+---
+
+### A4. Konwersja do GeoDataFrame i wizualizacja na mapie
+Oczyszczoną tabelę skonwertowano na obiekt `GeoDataFrame` oraz zwizualizowano na interaktywnej mapie podkładowej:
+
+    sensors = gpd.GeoDataFrame(
+        df,
+        geometry=gpd.points_from_xy(df["lon"], df["lat"]),   # x = lon, y = lat
+        crs="EPSG:4326",
+    )
+
+    sensors.explore(column="pm25", cmap="Oranges", marker_kwds={"radius": 6})
+
+- **Weryfikacja punktu kontrolnego:**
+  - Typ geometrii: `Point`
+  - Układ odniesienia (CRS): `EPSG:4326`
+  - Zasięg przestrzenny (`total_bounds`): `[17.79, 50.62, 18.02, 50.77]` – wszystkie czujniki poprawnie znajdują się na obszarze Opola.
 
 ![Mapa czujników PM2.5 w Opolu](img/Mapa.png)
+
+> **Wnioski (Pytanie kontrolne A4):**
+> *Co by się stało po zamianie kolejności argumentów na `points_from_xy(df["lat"], df["lon"])`?*
+> Funkcja `points_from_xy(x, y)` interpretuje pierwszy argument jako długość geograficzną (`X`), a drugi jako szerokość geograficzną (`Y`). Przekazanie `lat` (~50.7°) jako długości wschodniej oraz `lon` (~17.9°) jako szerokości północnej spowodowałoby wygenerowanie punktów o współrzędnych ok. **17.9°N, 50.7°E**, przez co wszystkie czujniki wylądowałyby na pustyni na **Półwyspie Arabskim (wschodni Jemen, przy granicy z Omanem i Arabią Saudyjską)**.
 
 ---
 
@@ -221,8 +304,8 @@ Sprawdzono wpływ układu współrzędnych na obliczenia odległości. Pomiar mi
 
 Wczytano warstwę wektorową `opole_districts.geojson` (**29 dzielnic**, źródłowy układ `EPSG:4326`), przetransformowano ją do `EPSG:2180` i obliczono powierzchnię w km².
 
-* **Łączna powierzchnia Opola:** **148.8 km²**
-* **5 największych dzielnic:**
+- **Łączna powierzchnia Opola:** **148.8 km²**
+- **5 największych dzielnic:**
 
 | Dzielnica | Powierzchnia [km²] |
 | :--- | :---: |
@@ -278,7 +361,7 @@ Wczytano warstwę 19 szkół podstawowych (`opole_schools.geojson`, konwersja do
 ## 7. A9. Eksport wyników do plików przestrzennych
 
 Wyniki zapisano w katalogu `wyniki/` w dwóch standardowych formatach GIS:
-* **`wyniki/pm25.gpkg`** (GeoPackage, układ `EPSG:2180`) – zawiera dwie warstwy: `districts` (29 poligonów ze statystykami PM2.5) oraz `sensors` (130 oczyszczonych punktów pomiarowych).
-* **`wyniki/pm25_districts.geojson`** (GeoJSON, układ `EPSG:4326`) – format gotowy do wykorzystania w aplikacjach webowych.
+- **`wyniki/pm25.gpkg`** (GeoPackage, układ `EPSG:2180`) – zawiera dwie warstwy: `districts` (29 poligonów ze statystykami PM2.5) oraz `sensors` (130 oczyszczonych punktów pomiarowych).
+- **`wyniki/pm25_districts.geojson`** (GeoJSON, układ `EPSG:4326`) – format gotowy do wykorzystania w aplikacjach webowych.
 
 Poprawność zapisu zweryfikowano za pomocą `gpd.list_layers()` oraz ponownego wczytania warstwy `districts` (29 wierszy, `EPSG:2180`).
